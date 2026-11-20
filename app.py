@@ -24,6 +24,53 @@ def load_data():
 
 df = load_data()
 
+# Automatically create database files
+# if they do not exist
+
+@st.cache_resource
+def initialize_databases():
+
+    os.makedirs("database", exist_ok=True)
+
+    # Create single database
+    conn = sqlite3.connect(
+        "database/single_database.db"
+    )
+
+    df.to_sql(
+        "customers",
+        conn,
+        if_exists="replace",
+        index=False
+    )
+
+    conn.close()
+
+    # Create three shards
+    for shard_no in range(1, 4):
+
+        shard_df = df[
+            df["customer_id"] % 3 == shard_no - 1
+        ]
+
+        conn = sqlite3.connect(
+            f"database/shard_{shard_no}.db"
+        )
+
+        shard_df.to_sql(
+            "customers",
+            conn,
+            if_exists="replace",
+            index=False
+        )
+
+        conn.close()
+
+    return True
+
+
+initialize_databases()
+
 
 # Read shard data
 def get_shard_data(shard_no):
